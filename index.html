@@ -136,7 +136,7 @@
             feedNews.push(...freshNews);
 
             // Ограничиваем размер одной выдачи до 6 карточек (чтобы лента выглядела компактно и реалистично)
-            feedNews = feedNews.slice(0, 6);
+            feedNews = feedNews.slice(0, 10);
             feedNews.sort(() => Math.random() - 0.5);
 
             // Расчет и генерация красивого времени публикаций
