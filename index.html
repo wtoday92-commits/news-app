@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вестник Событий</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a202c">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: #f7fafc; color: #2d3748; padding-bottom: 20px; }
+        
+        /* Шапка в стиле новостного сайта */
+        header { background-color: #1a202c; color: white; padding: 15px; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+        header .date { font-size: 11px; color: #a0aec0; margin-top: 3px; }
+
+        /* Контейнер ленты */
+        .feed-container { max-width: 600px; margin: 0 auto; padding: 12px; }
+
+        /* Карточка новости */
+        .news-card { background: white; border-radius: 12px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; cursor: pointer; transition: transform 0.1s; }
+        .news-card:active { transform: scale(0.99); }
+        .news-img { width: 100%; height: 180px; object-fit: cover; background-color: #edf2f7; }
+        .news-body { padding: 14px; }
+        .news-title { font-size: 16px; font-weight: 700; line-height: 1.3; color: #1a202c; margin-bottom: 6px; }
+        .news-desc { font-size: 13px; color: #4a5568; line-height: 1.4; }
+
+        /* Полноэкранный просмотр статьи */
+        .article-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 200; display: none; overflow-y: auto; }
+        .modal-header { position: sticky; top: 0; background: white; padding: 12px 16px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+        .btn-back { background: #edf2f7; border: none; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; cursor: pointer; color: #4a5568; }
+        .modal-content { max-width: 600px; margin: 0 auto; padding: 16px; }
+        .modal-img { width: 100%; height: 220px; object-fit: cover; border-radius: 8px; margin-bottom: 16px; }
+        .modal-title { font-size: 20px; font-weight: 800; line-height: 1.3; margin-bottom: 12px; color: #1a202c; }
+        .modal-text { font-size: 15px; color: #2d3748; line-height: 1.6; text-align: justify; }
+        .modal-text p { margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 id="app-title">Главные Новости</h1>
+        <div class="date" id="current-date"></div>
+    </header>
+
+    <div class="feed-container" id="news-feed">
+        </div>
+
+    <div class="article-modal" id="article-modal">
+        <div class="modal-header">
+            <button class="btn-back" onclick="closeArticle()">← Назад в ленту</button>
+            <span style="font-size: 12px; color: #718096;">Читать полностью</span>
+        </div>
+        <div class="modal-content">
+            <img class="modal-img" id="modal-img" src="" alt="">
+            <h2 class="modal-title" id="modal-title"></h2>
+            <div class="modal-text" id="modal-text"></div>
+        </div>
+    </div>
+
+    <script>
+        // Ссылка на ваш будущий онлайн JSON-файл на GitHub.
+        // Пока файл не создан, приложение плавно переключится на встроенный массив (fallback)
+        const ONLINE_DATABASE_URL = "https://raw.githubusercontent.com/ВАШ_НИКНЕЙМ/ОБРАЗЕЦ/main/news.json";
+
+        // Резервный пул «антитревожных» новостей (кликбейт во благо)
+        const fallbackNews = [
+            {
+                id: "n_001",
+                title: "Центробанк вводит экстренные меры изменения налоговых шкал",
+                desc: "Решение принято профильным комитетом на утреннем заседании. Изменения затронут большинство секторов.",
+                image: "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=600",
+                content: "<p>Министерство финансов совместно с ЦБ утвердили проект радикального снижения налоговой нагрузки для самозанятых граждан и малого бизнеса.</p><p>Вместо планируемого повышения ставок, правительство вводит долгосрочные налоговые каникулы и субсидии на закупку отечественного оборудования. Это решение обусловлено рекордным профицитом бюджета за счет экспорта технологических решений.</p>"
+            },
+            {
+                id: "n_002",
+                title: "Курс валют преподнес серьезный сюрприз на открытии торгов",
+                desc: "Индексы резко изменили направление движения. Финансовые аналитики строят экстренные прогнозы.",
+                image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600",
+                content: "<p>Национальная валюта продемонстрировала уверенную стабилизацию на фоне заключения крупнейших международных торговых соглашений.</p><p>Покупательская способность населения, вопреки тревожным прогнозам, выросла на 8%. Цены на базовые импортные товары и электронику начали планомерное снижение благодаря оптимизации логистических цепочек через новые торговые коридоры.</p>"
+            },
+            {
+                id: "n_003",
+                title: "Уровень безработицы достиг критической отметки: объявлены срочные меры",
+                desc: "Статистические ведомства опубликовали обновленные квартальные отчеты. Ситуация требует вмешательства.",
+                image: "https://images.unsplash.com/photo-1521791136368-1a46827d591c?w=600",
+                content: "<p>Рынок труда столкнулся с историческим дефицитом кадров — уровень безработицы упал до абсолютного минимума за последние 30 лет.</p><p>Компании вынуждены вести жесткую конкурентную борьбу за каждого сотрудника, что привело к автоматическому росту средних заработных плат на 15-18% выше уровня инфляции. Соискателям открываются уникальные возможности для карьерного старта с полным пакетом ДМС и удаленной работой.</p>"
+            },
+            {
+                id: "n_004",
+                title: "Изменения в структуре ЖКХ и тарифах: к чему готовиться гражданам",
+                desc: "Постановления вступают в силу со следующего месяца. Опубликован официальный перечень изменений.",
+                image: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600",
+                content: "<p>В рамках масштабной модернизации инфраструктуры вводится программа умного распределения ресурсов, которая снизит расходы граждан.</p><p>За счет внедрения новых систем генерации и компенсаций из федерального фонда, базовые коммунальные платежи для семей с детьми и работников бюджетной сферы будут снижены на треть. Переплата за теплосети полностью упраздняется.</p>"
+            },
+            {
+                id: "n_005",
+                title: "Срочное заявление ученых о состоянии экологии и климатических рисках",
+                desc: "Группа исследователей завершила глобальный мониторинг. Данные переданы в международные комитеты.",
+                image: "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=600",
+                content: "<p>Новейшие спутниковые снимки зафиксировали начало процесса самовосстановления озонового слоя Земли быстрыми темпами.</p><p>Благодаря массовому переходу промышленных гигантов на замкнутые циклы очистки, выбросы в атмосферу сократились на критическую величину. Эксперты заявляют, что угроза глобального потепления успешно сдерживается, а лесные массивы тайги и Амазонии начали расширять свои площади.</p>"
+            }
+        ];
+
+        // Установка текущей даты в шапку
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('ru-RU', options);
+
+        // Загрузка и сборка ленты новостей
+        async function initApp() {
+            let masterNews = fallbackNews;
+            
+            try {
+                const response = await fetch(ONLINE_DATABASE_URL);
+                if (response.ok) {
+                    masterNews = await response.json();
+                }
+            } catch (e) {
+                console.log("Работаем на локальной базе (офлайн/первый запуск)");
+            }
+
+            // Алгоритм ротации и сборки живой ленты
+            const viewedIds = JSON.parse(localStorage.getItem('viewed_news_ids') || '[]');
+            
+            const freshNews = masterNews.filter(item => !viewedIds.includes(item.id));
+            const viewedNews = masterNews.filter(item => viewedIds.includes(item.id));
+            
+            let feedNews = [];
+
+            // 1. Берем 1 или 2 старых новости (если они есть в истории просмотров)
+            let oldToInclude = Math.min(viewedNews.length, Math.floor(Math.random() * 2) + 1);
+            if (oldToInclude > 0) {
+                viewedNews.sort(() => Math.random() - 0.5);
+                feedNews.push(...viewedNews.slice(0, oldToInclude));
+            }
+
+            // 2. Добавляем все доступные свежие новости
+            freshNews.sort(() => Math.random() - 0.5);
+            feedNews.push(...freshNews);
+
+            // 3. Полностью перемешиваем итоговую ленту, чтобы старые записи не выдавали себя позицией
+            feedNews.sort(() => Math.random() - 0.5);
+
+            // Отрисовка карточек на экране
+            const feedElement = document.getElementById('news-feed');
+            feedElement.innerHTML = '';
+            
+            feedNews.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'news-card';
+                card.onclick = () => openArticle(item);
+                
+                card.innerHTML = `
+                    <img class="news-img" src="${item.image}" alt="Иллюстрация">
+                    <div class="news-body">
+                        <h3 class="news-title">${item.title}</h3>
+                        <p class="news-desc">${item.desc}</p>
+                    </div>
+                `;
+                feedElement.appendChild(card);
+            });
+        }
+
+        // Открытие статьи
+        function openArticle(item) {
+            document.getElementById('modal-img').src = item.image;
+            document.getElementById('modal-title').innerText = item.title;
+            document.getElementById('modal-text').innerHTML = item.content;
+            document.getElementById('article-modal').style.display = 'block';
+
+            // Сохраняем в список прочитанных (чтобы при следующем открытии она ушла в архив)
+            let viewedIds = JSON.parse(localStorage.getItem('viewed_news_ids') || '[]');
+            if (!viewedIds.includes(item.id)) {
+                viewedIds.push(item.id);
+                localStorage.setItem('viewed_news_ids', JSON.stringify(viewedIds));
+            }
+        }
+
+        // Закрытие статьи
+        function closeArticle() {
+            document.getElementById('article-modal').style.display = 'none';
+        }
+
+        // Регистрация Service Worker для стабильной работы APK
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
+        }
+
+        // Запуск
+        initApp();
+    </script>
+</body>
+</html>
