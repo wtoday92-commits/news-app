@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#1a202c">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        body { background-color: #f7fafc; color: #2d3748; padding-bottom: 20px; }
+        body { background-color: #f7fafc; color: #2d3748; padding-bottom: 20px; -webkit-tap-highlight-color: transparent; }
         
         header { background-color: #1a202c; color: white; padding: 15px; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
@@ -21,21 +21,22 @@
         .news-img { width: 100%; height: 180px; object-fit: cover; background-color: #edf2f7; }
         .news-body { padding: 14px; }
         
-        /* Новый стиль для даты в ленте */
         .news-meta { font-size: 12px; color: #718096; margin-bottom: 6px; font-weight: 500; }
-        
         .news-title { font-size: 16px; font-weight: 700; line-height: 1.3; color: #1a202c; margin-bottom: 6px; }
         .news-desc { font-size: 13px; color: #4a5568; line-height: 1.4; }
 
+        /* Блок окончания ленты */
+        .feed-end { text-align: center; padding: 30px 15px; color: #718096; font-size: 14px; }
+        .btn-refresh { display: inline-block; margin-top: 12px; background: #3182ce; color: white; border: none; padding: 10px 24px; border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 14px; box-shadow: 0 2px 4px rgba(49,130,206,0.2); }
+        .btn-refresh:active { background: #2b6cb0; }
+
+        /* Полноэкранный просмотр */
         .article-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 200; display: none; overflow-y: auto; }
         .modal-header { position: sticky; top: 0; background: white; padding: 12px 16px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
         .btn-back { background: #edf2f7; border: none; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 600; cursor: pointer; color: #4a5568; }
         .modal-content { max-width: 600px; margin: 0 auto; padding: 16px; }
         .modal-img { width: 100%; height: 220px; object-fit: cover; border-radius: 8px; margin-bottom: 16px; }
-        
-        /* Новый стиль для даты внутри статьи */
         .modal-meta { font-size: 13px; color: #718096; margin-bottom: 12px; border-bottom: 1px solid #edf2f7; padding-bottom: 12px; }
-        
         .modal-title { font-size: 20px; font-weight: 800; line-height: 1.3; margin-bottom: 12px; color: #1a202c; }
         .modal-text { font-size: 15px; color: #2d3748; line-height: 1.6; text-align: justify; }
         .modal-text p { margin-bottom: 12px; }
@@ -44,12 +45,17 @@
 <body>
 
     <header>
-        <h1 id="app-title">Главные Новости</h1>
+        <h1>Главные Новости</h1>
         <div class="date" id="current-date"></div>
     </header>
 
-    <div class="feed-container" id="news-feed">
-        <!-- Карточки новостей -->
+    <div class="feed-container">
+        <div id="news-feed"></div>
+        
+        <div class="feed-end" id="feed-end-block">
+            <p>Вы посмотрели все главные материалы за сегодня.</p>
+            <button class="btn-refresh" onclick="forceRefresh()">Обновить ленту</button>
+        </div>
     </div>
 
     <div class="article-modal" id="article-modal">
@@ -66,8 +72,8 @@
     </div>
 
     <script>
-        // Не забудьте вставить сюда вашу ссылку на GitHub
-        const ONLINE_DATABASE_URL = "https://raw.githubusercontent.com/wtoday92-commits/news-app/refs/heads/main/news.json";
+        // Замените на вашу прямую RAW ссылку с GitHub
+        const ONLINE_DATABASE_URL = "https://raw.githubusercontent.com/wtoday92-commits/news-app/main/news.json";
 
         const fallbackNews = [
             {
@@ -75,25 +81,23 @@
                 title: "Центробанк вводит экстренные меры изменения налоговых шкал",
                 desc: "Решение принято профильным комитетом на утреннем заседании. Изменения затронут большинство секторов.",
                 image: "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=600",
-                content: "<p>Министерство финансов совместно с ЦБ утвердили проект радикального снижения налоговой нагрузки для самозанятых граждан и малого бизнеса.</p><p>Вместо планируемого повышения ставок, правительство вводит долгосрочные налоговые каникулы и субсидии на закупку отечественного оборудования. Это решение обусловлено рекордным профицитом бюджета за счет экспорта технологических решений.</p>"
+                content: "<p>Министерство финансов совместно с ЦБ утвердили проект радикального снижения налоговой нагрузки для самозанятых граждан и малого бизнеса.</p><p>Вместо планируемого повышения ставок, правительство вводится долгосрочные налоговые каникулы.</p>"
             }
         ];
 
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        document.getElementById('current-date').innerText = new Date().toLocaleDateString('ru-RU', options);
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('ru-RU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
         async function initApp() {
             let masterNews = fallbackNews;
             try {
-                const response = await fetch(ONLINE_DATABASE_URL);
+                const response = await fetch(ONLINE_DATABASE_URL + '?t=' + Date.now()); // Защита от кэширования файла сетью
                 if (response.ok) {
                     masterNews = await response.json();
                 }
             } catch (e) {
-                console.log("Офлайн режим");
+                console.log("Офлайн режим или загрузка локальной заглушки");
             }
 
-            // Умная история: сохраняем не только ID, но и время прочтения
             let viewedHistory = JSON.parse(localStorage.getItem('news_history_timed') || '{}');
             const nowTime = Date.now();
             const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
@@ -105,63 +109,63 @@
                 if (!viewedHistory[item.id]) {
                     freshNews.push(item);
                 } else {
-                    // Если новость прочитана меньше 2 дней назад, она может попасть в подмешивание
                     const timeSinceRead = nowTime - viewedHistory[item.id];
                     if (timeSinceRead < TWO_DAYS_MS) {
                         recentlyViewed.push(item);
                     }
-                    // Новости старше 2 дней просто игнорируются (исчезают из ленты)
                 }
             });
 
+            // МЕХАНИКА ЗАЩИТЫ: Если всё-всё прочтено, стираем старую историю, чтобы лента не пустовала
+            if (freshNews.length === 0 && recentlyViewed.length === 0) {
+                localStorage.setItem('news_history_timed', '{}'); // Сброс памяти
+                freshNews = [...masterNews]; // Возвращаем все новости как новые
+            }
+
             let feedNews = [];
 
-            // 1. Берем 1 или 2 недавние новости
+            // Подмешиваем недавние (1-2 штуки)
             let oldToInclude = Math.min(recentlyViewed.length, Math.floor(Math.random() * 2) + 1);
             if (oldToInclude > 0) {
                 recentlyViewed.sort(() => Math.random() - 0.5);
                 feedNews.push(...recentlyViewed.slice(0, oldToInclude));
             }
 
-            // 2. Добавляем свежие
+            // Добавляем свежие
             freshNews.sort(() => Math.random() - 0.5);
             feedNews.push(...freshNews);
 
-            // 3. Ограничиваем длину ленты (чтобы не было 50 новостей сразу) и перемешиваем
-            feedNews = feedNews.slice(0, 10);
+            // Ограничиваем размер одной выдачи до 6 карточек (чтобы лента выглядела компактно и реалистично)
+            feedNews = feedNews.slice(0, 6);
             feedNews.sort(() => Math.random() - 0.5);
 
-            // 4. Умная расстановка дат (сверху - сегодня, ниже - вчера и позавчера)
+            // Расчет и генерация красивого времени публикаций
             feedNews.forEach((item, index) => {
                 let daysAgo = 0;
-                if (index > 2 && index <= 5) daysAgo = 1; // 4-6 новости - Вчера
-                else if (index > 5) daysAgo = 2;          // Остальные - Позавчера
+                if (index > 1 && index <= 3) daysAgo = 1; // Вчера
+                else if (index > 3) daysAgo = 2;          // Позавчера
 
                 const dateObj = new Date();
                 dateObj.setDate(dateObj.getDate() - daysAgo);
 
-                // Генерируем правдоподобное время
                 let hour;
                 if (daysAgo === 0) {
                     const currentHour = new Date().getHours();
                     const maxHour = Math.max(9, currentHour);
-                    hour = Math.floor(Math.random() * (maxHour - 8 + 1)) + 8; // От 8 утра до текущего часа
+                    hour = Math.floor(Math.random() * (maxHour - 8 + 1)) + 8;
                 } else {
                     hour = Math.floor(Math.random() * (22 - 9 + 1)) + 9;
                 }
                 const min = Math.floor(Math.random() * 60).toString().padStart(2, '0');
 
-                let dateStr = '';
-                if (daysAgo === 0) dateStr = 'Сегодня';
-                else if (daysAgo === 1) dateStr = 'Вчера';
-                else {
-                    dateStr = dateObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-                }
+                let dateStr = 'Сегодня';
+                if (daysAgo === 1) dateStr = 'Вчера';
+                else if (daysAgo === 2) dateStr = dateObj.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
 
                 item.displayDate = `${dateStr} в ${hour}:${min}`;
             });
 
-            // Отрисовка
+            // Вывод данных на экран смартфона
             const feedElement = document.getElementById('news-feed');
             feedElement.innerHTML = '';
             
@@ -171,7 +175,7 @@
                 card.onclick = () => openArticle(item);
                 
                 card.innerHTML = `
-                    <img class="news-img" src="${item.image}" alt="Обложка">
+                    <img class="news-img" src="${item.image}" alt="Иллюстрация">
                     <div class="news-body">
                         <div class="news-meta">${item.displayDate}</div>
                         <h3 class="news-title">${item.title}</h3>
@@ -190,7 +194,6 @@
             document.getElementById('article-modal').style.display = 'block';
             window.scrollTo(0, 0);
 
-            // Сохраняем ID и точное время прочтения
             let viewedHistory = JSON.parse(localStorage.getItem('news_history_timed') || '{}');
             if (!viewedHistory[item.id]) {
                 viewedHistory[item.id] = Date.now();
@@ -200,6 +203,17 @@
 
         function closeArticle() {
             document.getElementById('article-modal').style.display = 'none';
+        }
+
+        // Функция принудительного обновления кнопкой
+        function forceRefresh() {
+            const btn = document.querySelector('.btn-refresh');
+            btn.innerText = 'Обновление...';
+            btn.style.opacity = '0.6';
+            
+            setTimeout(() => {
+                window.location.reload(); // Перезапуск страницы
+            }, 400);
         }
 
         if ('serviceWorker' in navigator) {
