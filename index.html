@@ -186,8 +186,16 @@
             });
         }
 
-        function openArticle(item) {
-            document.getElementById('modal-img').src = item.image;
+       function openArticle(item) {
+            const modalImg = document.getElementById('modal-img');
+            // Логика отображения внутренней картинки
+            if (item.articleImage && item.articleImage !== "") {
+                modalImg.src = item.articleImage;
+                modalImg.style.display = 'block';
+            } else {
+                modalImg.style.display = 'none';
+            }
+
             document.getElementById('modal-title').innerText = item.title;
             document.getElementById('modal-meta').innerText = `Опубликовано: ${item.displayDate}`;
             document.getElementById('modal-text').innerHTML = item.content;
@@ -200,7 +208,6 @@
                 localStorage.setItem('news_history_timed', JSON.stringify(viewedHistory));
             }
         }
-
         function closeArticle() {
             document.getElementById('article-modal').style.display = 'none';
         }
