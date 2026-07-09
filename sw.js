@@ -1,4 +1,4 @@
-const CACHE_NAME = 'news-cache-v1';
+const CACHE_NAME = 'news-cache-v2';
 const assets = ['index.html', 'manifest.json'];
 
 self.addEventListener('install', e => {
